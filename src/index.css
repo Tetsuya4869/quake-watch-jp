@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #020617;
+}
+
+.quake-marker {
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.quake-marker:hover {
+  transform: scale(1.2);
+  opacity: 1 !important;
+}
+
+.mapboxgl-popup-content {
+  background: #1e293b !important;
+  color: white !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 12px !important;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: #1e293b !important;
+}
