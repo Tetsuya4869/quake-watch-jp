@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
 interface Quake {
   id: string;
@@ -21,6 +21,10 @@ const EarthquakeMap: React.FC<{ quakes: Quake[] }> = ({ quakes }) => {
   useEffect(() => {
     if (map.current) return;
     if (!mapContainer.current) return;
+    if (!mapboxgl.accessToken) {
+      console.error('Mapbox token is not set. Please set VITE_MAPBOX_TOKEN.');
+      return;
+    }
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
