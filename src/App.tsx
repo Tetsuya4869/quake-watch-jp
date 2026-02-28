@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import EarthquakeMap from './components/EarthquakeMap';
 import { Activity, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatIntensity } from './utils/formatIntensity';
 
 interface Quake {
   id: string;
@@ -37,14 +38,6 @@ function App() {
     } catch (error) {
       console.error('Failed to fetch quakes:', error);
     }
-  };
-
-  const formatIntensity = (intensity: number) => {
-    const mapping: Record<number, string> = {
-      10: '1', 20: '2', 30: '3', 40: '4',
-      45: '5弱', 50: '5強', 55: '6弱', 60: '6強', 70: '7'
-    };
-    return mapping[intensity] || '不明';
   };
 
   useEffect(() => {
