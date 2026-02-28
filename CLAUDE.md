@@ -28,6 +28,7 @@ P2P地震情報APIから取得した最新の地震データを、Mapbox GLに�
 | スタイリング | Tailwind CSS | (CDN/PostCSS) |
 | アイコン | Lucide React | 0.563.x |
 | 日付処理 | date-fns | 4.x |
+| テスト | Vitest + Testing Library | 4.x / 16.x |
 
 ---
 
@@ -37,7 +38,7 @@ P2P地震情報APIから取得した最新の地震データを、Mapbox GLに�
 quake-watch-jp/
 ├── index.html                    # エントリHTML（lang="ja"）
 ├── package.json                  # 依存関係・スクリプト定義
-├── vite.config.ts                # Vite設定
+├── vite.config.ts                # Vite設定（Vitestの設定も含む）
 ├── tsconfig.json                 # TypeScript設定
 ├── tsconfig.node.json            # Node用TypeScript設定
 ├── .env                          # 環境変数（VITE_MAPBOX_TOKEN）
@@ -47,9 +48,18 @@ quake-watch-jp/
 └── src/
     ├── main.tsx                  # Reactエントリポイント
     ├── App.tsx                   # メインアプリコンポーネント
+    ├── App.test.tsx              # Appコンポーネントのテスト
     ├── index.css                 # グローバルスタイル（Tailwind + カスタムCSS）
-    └── components/
-        └── EarthquakeMap.tsx     # Mapbox地図コンポーネント
+    ├── components/
+    │   ├── EarthquakeMap.tsx     # Mapbox地図コンポーネント
+    │   └── EarthquakeMap.test.tsx
+    ├── utils/                    # 純粋関数ユーティリティ（テスト対象）
+    │   ├── formatIntensity.ts    # 震度コード→表示文字列変換
+    │   ├── formatIntensity.test.ts
+    │   ├── getIntensityColor.ts  # 震度→マーカー色変換
+    │   └── getIntensityColor.test.ts
+    └── test/
+        └── setup.ts              # Vitestセットアップ（jest-domマッチャー）
 ```
 
 ---
@@ -68,6 +78,15 @@ npm run build
 
 # ビルド結果のプレビュー
 npm run preview
+
+# テスト実行（CI用・1回実行）
+npm test
+
+# テスト実行（ウォッチモード・開発時）
+npm run test:watch
+
+# カバレッジレポート生成
+npm run test:coverage
 ```
 
 ---
@@ -103,9 +122,12 @@ P2P Quake API → App.tsx (fetch + state管理) → EarthquakeMap.tsx (マーカ
 - **`App.tsx`** - データ取得・状態管理・レイアウト（サイドバー + マップ）
   - `Quake`インターフェース定義
   - `fetchQuakes()` - API呼び出し・データ整形
-  - `formatIntensity()` - 震度コード→表示文字列変換（10→1, 20→2, ..., 70→7）
 - **`EarthquakeMap.tsx`** - Mapbox GL地図の初期化・マーカー管理
-  - `getIntensityColor()` - 震度→色変換
+
+### ユーティリティ（`src/utils/`）
+
+- **`formatIntensity.ts`** - 震度コード→表示文字列変換（10→1, 20→2, ..., 70→7）
+- **`getIntensityColor.ts`** - 震度文字列→マーカー色のHex変換
 
 ### 震度マッピング
 
@@ -120,6 +142,26 @@ P2P Quake API → App.tsx (fetch + state管理) → EarthquakeMap.tsx (マーカ
 | 55 | 6弱 |
 | 60 | 6強 |
 | 70 | 7 |
+
+---
+
+## テスト
+
+### テスト構成
+
+テストファイルはソースファイルと同じディレクトリに配置（コロケーション方式）。
+
+| ファイル | テスト数 | 内容 |
+|---------|---------|------|
+| `utils/formatIntensity.test.ts` | 11 | 全震度コードのマッピング、不明コードのフォールバック |
+| `utils/getIntensityColor.test.ts` | 10 | 全震度文字列の色変換、`includes()`ロジックの回帰テスト |
+| `App.test.tsx` | 10 | ローディング状態、データ取得後の描画、ポーリング、アンマウント時のクリーンアップ |
+| `components/EarthquakeMap.test.tsx` | 8 | マップ初期化、マーカー生成・座標・サイズ計算、ポップアップHTML |
+
+### Mapboxのモック
+
+`EarthquakeMap.test.tsx`では`vi.mock('mapbox-gl')`でMapbox GL全体をモック。
+`vi.hoisted()`で定義したインスタンスを`vi.mock`ファクトリ内から参照している。
 
 ---
 
