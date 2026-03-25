@@ -32,3 +32,14 @@ body {
 .mapboxgl-popup-tip {
   border-top-color: #1e293b !important;
 }
+
+/* iOS safe area utilities */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.bottom-safe {
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}

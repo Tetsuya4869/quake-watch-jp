@@ -48,7 +48,7 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white font-sans overflow-hidden">
+    <div className="flex h-dvh bg-slate-950 text-white font-sans overflow-hidden">
 
       {/* Backdrop (mobile only) */}
       {listOpen && (
@@ -110,7 +110,7 @@ function App() {
           )}
         </div>
 
-        <div className="p-4 bg-red-950/20 border-t border-red-900/30">
+        <div className="p-4 pb-safe bg-red-950/20 border-t border-red-900/30 md:pb-4">
           <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
             <ShieldAlert size={14} /> リアルタイム監視中
           </div>
@@ -134,7 +134,7 @@ function App() {
 
         {/* List toggle button (mobile only) */}
         <button
-          className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-10
+          className="md:hidden absolute bottom-safe left-1/2 -translate-x-1/2 z-10
             flex items-center gap-2 px-5 py-3
             bg-slate-900/90 backdrop-blur-md border border-slate-700
             rounded-full text-sm font-bold shadow-xl
