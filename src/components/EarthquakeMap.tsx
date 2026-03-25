@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { getIntensityColor } from '../utils/getIntensityColor';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -59,14 +60,6 @@ const EarthquakeMap: React.FC<{ quakes: Quake[] }> = ({ quakes }) => {
         .addTo(map.current!);
     });
   }, [quakes]);
-
-  const getIntensityColor = (intensity: string) => {
-    if (intensity.includes('7')) return '#ff0000';
-    if (intensity.includes('6')) return '#ff4500';
-    if (intensity.includes('5')) return '#ff8c00';
-    if (intensity.includes('4')) return '#ffd700';
-    return '#38bdf8';
-  };
 
   return <div ref={mapContainer} className="w-full h-full" />;
 };
