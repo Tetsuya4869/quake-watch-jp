@@ -55,6 +55,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-slate-950 text-white font-sans overflow-hidden">
+      <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] z-[9999] px-1">DEBUG: APP LOADED</div>
       {/* Sidebar */}
       <div className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-2xl">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
