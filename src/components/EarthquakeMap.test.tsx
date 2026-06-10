@@ -9,12 +9,14 @@ const { mockMapInstance, mockMarkerInstance, mockPopupInstance } = vi.hoisted(()
     setLngLat: vi.fn(),
     setPopup: vi.fn(),
     addTo: vi.fn(),
+    remove: vi.fn(),
   };
   const mockPopupInstance = {
     setHTML: vi.fn(),
   };
   const mockMapInstance = {
     addControl: vi.fn(),
+    remove: vi.fn(),
   };
   return { mockMapInstance, mockMarkerInstance, mockPopupInstance };
 });
@@ -109,5 +111,44 @@ describe('EarthquakeMap', () => {
     expect(mockPopupInstance.setHTML).toHaveBeenCalledWith(
       expect.stringContaining('M4.2')
     );
+  });
+
+  it('escapes HTML in the popup to prevent XSS', () => {
+    render(<EarthquakeMap quakes={[
+      { ...sampleQuakes[0], hypocenter: '<img src=x onerror=alert(1)>' },
+    ]} />);
+    const html = mockPopupInstance.setHTML.mock.calls[0][0] as string;
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img');
+  });
+
+  it('removes existing markers via the Mapbox API when quakes change', () => {
+    const { rerender } = render(<EarthquakeMap quakes={[sampleQuakes[0]]} />);
+    expect(mockMarkerInstance.remove).not.toHaveBeenCalled();
+
+    rerender(<EarthquakeMap quakes={sampleQuakes} />);
+    // 1個目のレンダーで作られたマーカーが破棄される
+    expect(mockMarkerInstance.remove).toHaveBeenCalledTimes(1);
+  });
+
+  it('sets an aria-label on each marker for accessibility', async () => {
+    const mapboxgl = (await import('mapbox-gl')).default;
+    render(<EarthquakeMap quakes={[sampleQuakes[0]]} />);
+    const el = (mapboxgl.Marker as ReturnType<typeof vi.fn>).mock.calls[0][0] as HTMLElement;
+    expect(el.getAttribute('aria-label')).toBe('茨城県南部 マグニチュード4.2 震度4');
+  });
+
+  it('keeps the quake-marker class so hover styles apply', async () => {
+    const mapboxgl = (await import('mapbox-gl')).default;
+    render(<EarthquakeMap quakes={[sampleQuakes[0]]} />);
+    const el = (mapboxgl.Marker as ReturnType<typeof vi.fn>).mock.calls[0][0] as HTMLElement;
+    expect(el.classList.contains('quake-marker')).toBe(true);
+    expect(el.classList.contains('animate-pulse')).toBe(true);
+  });
+
+  it('removes the map on unmount', () => {
+    const { unmount } = render(<EarthquakeMap quakes={[]} />);
+    unmount();
+    expect(mockMapInstance.remove).toHaveBeenCalledTimes(1);
   });
 });

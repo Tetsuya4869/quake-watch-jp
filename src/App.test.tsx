@@ -136,16 +136,90 @@ describe('App', () => {
   });
 
   describe('error handling', () => {
-    it('keeps loading state true when fetch throws a network error', async () => {
-      // Bug: loading is never set to false on error, so "Loading live data..."
-      // persists indefinitely. This test documents the current (broken) behaviour.
+    it('shows an error message and retry button when fetch throws', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       await act(async () => { render(<App />); });
 
-      expect(screen.getByText('Loading live data...')).toBeInTheDocument();
+      expect(screen.queryByText('Loading live data...')).not.toBeInTheDocument();
+      expect(screen.getByText('地震情報の取得に失敗しました')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /再試行/ })).toBeInTheDocument();
       consoleSpy.mockRestore();
+    });
+
+    it('shows an error when the API responds with a non-OK status', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 503,
+      } as Response);
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await act(async () => { render(<App />); });
+
+      expect(screen.getByText('地震情報の取得に失敗しました')).toBeInTheDocument();
+      consoleSpy.mockRestore();
+    });
+
+    it('refetches and recovers when the retry button is clicked', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValue({
+          ok: true,
+          json: async () => mockApiResponse,
+        } as Response);
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await act(async () => { render(<App />); });
+      expect(screen.getByText('地震情報の取得に失敗しました')).toBeInTheDocument();
+
+      await act(async () => {
+        screen.getByRole('button', { name: /再試行/ }).click();
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('茨城県南部')).toBeInTheDocument();
+      expect(screen.queryByText('地震情報の取得に失敗しました')).not.toBeInTheDocument();
+      consoleSpy.mockRestore();
+    });
+
+    it('keeps showing stale data with a warning when a later poll fails', async () => {
+      vi.useFakeTimers();
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockApiResponse,
+        } as Response)
+        .mockRejectedValue(new Error('Network error'));
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await act(async () => { render(<App />); });
+      expect(screen.getByText('茨城県南部')).toBeInTheDocument();
+
+      // 60秒後のポーリングが失敗
+      await act(async () => {
+        vi.advanceTimersByTime(60000);
+      });
+
+      // 取得済みデータは残したまま、警告バナーを表示する
+      expect(screen.getByText('茨城県南部')).toBeInTheDocument();
+      expect(screen.getByText(/前回取得したデータを表示しています/)).toBeInTheDocument();
+
+      consoleSpy.mockRestore();
+      vi.useRealTimers();
+    });
+  });
+
+  describe('empty state', () => {
+    it('shows an empty message when the API returns no quakes', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      } as Response);
+
+      await act(async () => { render(<App />); });
+
+      expect(screen.getByText('表示できる地震情報がありません')).toBeInTheDocument();
     });
   });
 

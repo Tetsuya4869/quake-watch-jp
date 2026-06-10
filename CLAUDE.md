@@ -36,20 +36,23 @@ P2P地震情報APIから取得した最新の地震データを、Mapbox GLに�
 
 ```
 quake-watch-jp/
-├── index.html                    # エントリHTML（lang="ja"）
+├── index.html                    # エントリHTML（lang="ja"、viewport-fit=cover）
 ├── package.json                  # 依存関係・スクリプト定義
 ├── vite.config.ts                # Vite設定（Vitestの設定も含む）
 ├── tsconfig.json                 # TypeScript設定
 ├── tsconfig.node.json            # Node用TypeScript設定
 ├── .env                          # 環境変数（VITE_MAPBOX_TOKEN）
 ├── .gitignore
+├── README.md                     # プロジェクト概要・セットアップ手順
 ├── public/
 │   └── vite.svg                  # Viteロゴ
 └── src/
     ├── main.tsx                  # Reactエントリポイント
     ├── App.tsx                   # メインアプリコンポーネント
     ├── App.test.tsx              # Appコンポーネントのテスト
-    ├── index.css                 # グローバルスタイル（Tailwind + カスタムCSS）
+    ├── index.css                 # グローバルスタイル（Tailwind + セーフエリアユーティリティ）
+    ├── types/
+    │   └── quake.ts              # Quake型・P2PQuakeRecord型（APIレスポンス型定義）
     ├── components/
     │   ├── EarthquakeMap.tsx     # Mapbox地図コンポーネント
     │   └── EarthquakeMap.test.tsx
@@ -57,7 +60,11 @@ quake-watch-jp/
     │   ├── formatIntensity.ts    # 震度コード→表示文字列変換
     │   ├── formatIntensity.test.ts
     │   ├── getIntensityColor.ts  # 震度→マーカー色変換
-    │   └── getIntensityColor.test.ts
+    │   ├── getIntensityColor.test.ts
+    │   ├── formatQuakeTime.ts    # 時刻文字列→"MM/dd HH:mm"整形（不正値フォールバック付き）
+    │   ├── formatQuakeTime.test.ts
+    │   ├── escapeHtml.ts         # HTML特殊文字エスケープ（XSS対策）
+    │   └── escapeHtml.test.ts
     └── test/
         └── setup.ts              # Vitestセットアップ（jest-domマッチャー）
 ```
@@ -120,14 +127,26 @@ P2P Quake API → App.tsx (fetch + state管理) → EarthquakeMap.tsx (マーカ
 ### コンポーネント構成
 
 - **`App.tsx`** - データ取得・状態管理・レイアウト（サイドバー + マップ）
-  - `Quake`インターフェース定義
-  - `fetchQuakes()` - API呼び出し・データ整形
+  - `fetchQuakes()` - API呼び出し（`response.ok`チェック・配列バリデーション）・データ整形
+  - 状態: `loading` / `error` / `quakes` / `listOpen`（モバイルのボトムシート開閉）
+  - エラー時UI: データなし→エラーメッセージ + 再試行ボタン、データあり→前回データ保持 + 警告バナー
+  - セマンティックHTML（`aside`/`main`/`ul`/`article`）+ ARIA属性
 - **`EarthquakeMap.tsx`** - Mapbox GL地図の初期化・マーカー管理
+  - マーカーは`useRef`で参照を保持し、`marker.remove()`で破棄（直接DOM操作なし）
+  - アンマウント時に`map.remove()`でクリーンアップ
+  - ポップアップHTMLは`escapeHtml`でエスケープ、マーカーに`aria-label`付与
+
+### 型定義（`src/types/quake.ts`）
+
+- **`Quake`** - アプリ内で使用する整形済み地震情報
+- **`P2PQuakeRecord`** - P2P地震情報APIのレスポンス型（`any`不使用）
 
 ### ユーティリティ（`src/utils/`）
 
 - **`formatIntensity.ts`** - 震度コード→表示文字列変換（10→1, 20→2, ..., 70→7）
 - **`getIntensityColor.ts`** - 震度文字列→マーカー色のHex変換
+- **`formatQuakeTime.ts`** - API時刻文字列→"MM/dd HH:mm"整形（パース不能時はプレースホルダ）
+- **`escapeHtml.ts`** - HTML特殊文字エスケープ（ポップアップのXSS対策）
 
 ### 震度マッピング
 
@@ -155,8 +174,10 @@ P2P Quake API → App.tsx (fetch + state管理) → EarthquakeMap.tsx (マーカ
 |---------|---------|------|
 | `utils/formatIntensity.test.ts` | 11 | 全震度コードのマッピング、不明コードのフォールバック |
 | `utils/getIntensityColor.test.ts` | 10 | 全震度文字列の色変換、`includes()`ロジックの回帰テスト |
-| `App.test.tsx` | 10 | ローディング状態、データ取得後の描画、ポーリング、アンマウント時のクリーンアップ |
-| `components/EarthquakeMap.test.tsx` | 8 | マップ初期化、マーカー生成・座標・サイズ計算、ポップアップHTML |
+| `utils/formatQuakeTime.test.ts` | 3 | 時刻整形、不正値のフォールバック |
+| `utils/escapeHtml.test.ts` | 3 | HTML特殊文字のエスケープ |
+| `App.test.tsx` | 14 | ローディング/エラー/空データ状態、再試行、ポーリング失敗時の前回データ保持、ポーリング、クリーンアップ |
+| `components/EarthquakeMap.test.tsx` | 13 | マップ初期化・破棄、マーカー生成・破棄・座標・サイズ計算、XSSエスケープ、aria-label |
 
 ### Mapboxのモック
 
